@@ -3,7 +3,7 @@
 Pure-chat terminal interface for **D'Ai**.
 
 ```
-D'Ai CLI  v0.1.0
+D'Ai CLI  v0.1.1
 Type "help", "exit", or ask anything.
 
 >>> What is the capital of France?

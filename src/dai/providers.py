@@ -30,66 +30,97 @@ CORE GUIDELINES:
 """
 
 
+# Shared persistent client for connection pooling & fast TLS keep-alive
+_client: httpx.Client | None = None
+
+
+def get_client() -> httpx.Client:
+    global _client
+    if _client is None or _client.is_closed:
+        _client = httpx.Client(timeout=60.0)
+    return _client
+
+
+def _stream_from_payload(
+    client: httpx.Client,
+    payload: dict,
+    headers: dict[str, str],
+) -> Generator[str, None, None]:
+    with client.stream(
+        "POST",
+        API_URL,
+        headers=headers,
+        json=payload,
+    ) as resp:
+        if resp.status_code != 200:
+            body = resp.read().decode("utf-8", errors="replace")[:300]
+            raise RuntimeError(
+                f"D-Ai backend returned HTTP {resp.status_code}: {body}"
+            )
+
+        for line in resp.iter_lines():
+            if not line:
+                continue
+            if line.startswith("data: "):
+                data = line[6:].strip()
+                if data == "[DONE]":
+                    return
+                try:
+                    chunk = json.loads(data)
+                    delta = (
+                        chunk.get("choices", [{}])[0]
+                        .get("delta", {})
+                        .get("content")
+                    )
+                    if delta:
+                        yield delta
+                except Exception:
+                    if data and not data.startswith("{"):
+                        yield data
+                    continue
+
+
 def chat_stream(
     messages: list[dict[str, str]],
     *,
     temperature: float = 0.7,
     max_tokens: int = 4096,
+    provider: str = "inception",
 ) -> Generator[str, None, None]:
     """
     Stream a response from the public D-Ai API.
-    Yields text chunks. Raises RuntimeError on failure.
+    Routes to Inception (mercury-2.5) first for ultra-fast generation,
+    falling back cleanly to the backend's multi-provider cascade if needed.
     """
-    full_messages = [{"role": "system", "content": SYSTEM_PROMPT}] + messages
+    client = get_client()
 
-    payload = {
-        "messages": full_messages,
+    headers = {
+        "Content-Type": "application/json",
+        "User-Agent": "D-Ai-CLI/0.1.1",
+        "Accept": "text/event-stream",
+    }
+
+    base_payload = {
+        "messages": messages,
         "stream": True,
         "max_tokens": max_tokens,
         "temperature": temperature,
         "enable_tools": False,  # pure chat for now
     }
 
-    headers = {
-        "Content-Type": "application/json",
-        "User-Agent": "D-Ai-CLI/0.1.0",
-        "Accept": "text/event-stream",
-    }
+    # 1. Attempt ultra-fast Inception primary
+    if provider:
+        inception_payload = dict(base_payload)
+        inception_payload["provider"] = provider
+        try:
+            yield from _stream_from_payload(client, inception_payload, headers)
+            return
+        except Exception:
+            # Fall back to backend cascade
+            pass
 
+    # 2. Seamless fallback to default backend cascade
     try:
-        with httpx.Client(timeout=90.0) as client:
-            with client.stream(
-                "POST",
-                API_URL,
-                headers=headers,
-                json=payload,
-            ) as resp:
-                if resp.status_code != 200:
-                    body = resp.read().decode("utf-8", errors="replace")[:300]
-                    raise RuntimeError(
-                        f"D-Ai backend returned HTTP {resp.status_code}: {body}"
-                    )
-
-                for line in resp.iter_lines():
-                    if not line:
-                        continue
-                    if line.startswith("data: "):
-                        data = line[6:].strip()
-                        if data == "[DONE]":
-                            return
-                        try:
-                            chunk = json.loads(data)
-                            delta = (
-                                chunk.get("choices", [{}])[0]
-                                .get("delta", {})
-                                .get("content")
-                            )
-                            if delta:
-                                yield delta
-                        except Exception:
-                            if data and not data.startswith("{"):
-                                yield data
-                            continue
-
+        yield from _stream_from_payload(client, base_payload, headers)
     except httpx.RequestError as e:
         raise RuntimeError(f"Could not reach D-Ai backend: {e}") from e
