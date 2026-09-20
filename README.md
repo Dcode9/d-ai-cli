@@ -3,7 +3,7 @@
 Pure-chat terminal interface for **D'Ai**.
 
 ```
-D'Ai CLI  v0.1.1
+D'Ai CLI  v0.1.2
 Type "help", "exit", or ask anything.
 
 >>> What is the capital of France?
@@ -29,7 +29,12 @@ Then run:
 d-ai
 ```
 
-That's it.
+Or pass a question directly:
+
+```bash
+d-ai "Explain quantum computing in simple terms"
+d-ai --max-tokens 32768
+```
 
 ### Other ways
 
@@ -60,12 +65,13 @@ Or: https://www.python.org/downloads/ → check "Add to PATH" → Install
 
 ## Commands inside the CLI
 
-| Command      | Action                     |
-|--------------|----------------------------|
-| `help` / `?` | Show help                  |
-| `exit` / `q` | Quit                       |
-| `clear`      | Clear the screen           |
-| `reset`      | Clear conversation history |
+| Command            | Action                                                |
+|--------------------|-------------------------------------------------------|
+| `help` / `?`       | Show help                                             |
+| `tokens [N]`       | View or set max output tokens (e.g. `tokens 32768`)   |
+| `exit` / `q`       | Quit                                                  |
+| `clear`            | Clear the screen                                      |
+| `reset`            | Clear conversation history                            |
 
 Just type any other text to chat.
 

@@ -80,11 +80,14 @@ def _stream_from_payload(
                     continue
 
 
+DEFAULT_MAX_TOKENS = 16384
+
+
 def chat_stream(
     messages: list[dict[str, str]],
     *,
     temperature: float = 0.7,
-    max_tokens: int = 4096,
+    max_tokens: int = DEFAULT_MAX_TOKENS,
     provider: str = "inception",
 ) -> Generator[str, None, None]:
     """
@@ -96,7 +99,7 @@ def chat_stream(
 
     headers = {
         "Content-Type": "application/json",
-        "User-Agent": "D-Ai-CLI/0.1.1",
+        "User-Agent": "D-Ai-CLI/0.1.2",
         "Accept": "text/event-stream",
     }
 
@@ -104,6 +107,7 @@ def chat_stream(
         "messages": messages,
         "stream": True,
         "max_tokens": max_tokens,
+        "max_completion_tokens": max_tokens,
         "temperature": temperature,
         "enable_tools": False,  # pure chat for now
     }
