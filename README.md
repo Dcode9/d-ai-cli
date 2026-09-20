@@ -20,7 +20,7 @@ Anyone can install and use it — the CLI talks to the public D-Ai backend (keys
 ## Install
 
 ```bash
-pip install d-ai
+pip install d-ai-cli
 ```
 
 Then run:
@@ -38,9 +38,9 @@ That's it.
 pip install git+https://github.com/Dcode9/d-ai-cli.git
 
 # Isolated install
-pipx install d-ai
+pipx install d-ai-cli
 # or
-uv tool install d-ai
+uv tool install d-ai-cli
 ```
 
 ---
@@ -51,7 +51,7 @@ uv tool install d-ai
 winget install Python.Python.3.12
 ```
 
-Then open a **new** terminal and run `pip install d-ai`.
+Then open a **new** terminal and run `pip install d-ai-cli`.
 
 Or: Microsoft Store → search "Python 3.12" → Install  
 Or: https://www.python.org/downloads/ → check "Add to PATH" → Install
