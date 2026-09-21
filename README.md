@@ -1,103 +1,65 @@
 # D'Ai CLI
 
-Pure-chat terminal interface for **D'Ai**.
+Agentic coding harness for **D'Ai** — Python-REPL style, no API key required.
 
 ```
-D'Ai CLI  v0.1.2
-Type "help", "exit", or ask anything.
+D'Ai CLI  v0.2.0  · agent harness
+Type "help", "exit", or ask anything. Tools work in the current directory.
 
->>> What is the capital of France?
-The capital of France is Paris.
+>>> create a hello.py that prints hi
+⚙ write_file {"path": "hello.py", "content": "..."}
+Wrote 28 chars to hello.py
 
->>>
+Created `hello.py` in the current directory.
 ```
-
-**No API key. No login. No account.**  
-Anyone can install and use it — the CLI talks to the public D-Ai backend (keys stay on the server).
-
----
 
 ## Install
 
 ```bash
-pip install d-ai-cli
-```
-
-Then run:
-
-```bash
+pip install -U d-ai-cli
 d-ai
 ```
 
-Or pass a question directly:
+## Harness tools (automatic)
+
+| Tool | Purpose |
+|------|---------|
+| `list_dir` | Explore files |
+| `read_file` | Read a file |
+| `write_file` | Create / overwrite a file |
+| `edit_file` | Surgical string replace |
+| `mkdir` | Create directories |
+| `run_shell` | Run commands (cwd = project root) |
+| `web_search` | Live web search via D-Ai backend |
+
+**All file and shell tools are restricted to the current working directory.**
+
+## Commands
+
+| Command | Action |
+|---------|--------|
+| `help` | Help |
+| `pwd` | Show tool scope (cwd) |
+| `tokens [N]` | Max output tokens |
+| `reset` | Clear history |
+| `clear` | Clear screen |
+| `exit` | Quit |
+
+## One-shot
 
 ```bash
-d-ai "Explain quantum computing in simple terms"
-d-ai --max-tokens 32768
+d-ai "list files and summarize this repo"
 ```
-
-### Other ways
-
-```bash
-# From GitHub (if not yet on PyPI)
-pip install git+https://github.com/Dcode9/d-ai-cli.git
-
-# Isolated install
-pipx install d-ai-cli
-# or
-uv tool install d-ai-cli
-```
-
----
-
-## How to install Python (Windows, if needed)
-
-```powershell
-winget install Python.Python.3.12
-```
-
-Then open a **new** terminal and run `pip install d-ai-cli`.
-
-Or: Microsoft Store → search "Python 3.12" → Install  
-Or: https://www.python.org/downloads/ → check "Add to PATH" → Install
-
----
-
-## Commands inside the CLI
-
-| Command            | Action                                                |
-|--------------------|-------------------------------------------------------|
-| `help` / `?`       | Show help                                             |
-| `tokens [N]`       | View or set max output tokens (e.g. `tokens 32768`)   |
-| `exit` / `q`       | Quit                                                  |
-| `clear`            | Clear the screen                                      |
-| `reset`            | Clear conversation history                            |
-
-Just type any other text to chat.
-
----
 
 ## How it works
 
 ```
-Your terminal  →  d-ai CLI  →  https://d-ai-omega.vercel.app/api/chat  →  reply
+You → d-ai CLI → D-Ai backend (reasoning + tool calls)
+                      ↓
+              local tools on your machine (cwd only)
 ```
 
-The backend already has the API keys (same ones used by the web app).  
-Users never see or set any keys.
-
----
-
-## Development
-
-```bash
-git clone https://github.com/Dcode9/d-ai-cli.git
-cd d-ai-cli
-pip install -e .
-d-ai
-```
-
----
+No user API keys. Keys stay on the Vercel backend.
 
 ## License
 

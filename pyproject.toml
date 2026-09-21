@@ -4,8 +4,8 @@ build-backend = "hatchling.build"
 
 [project]
 name = "d-ai-cli"
-version = "0.1.2"
-description = "D'Ai CLI — pure chat terminal interface. No API key required."
+version = "0.2.0"
+description = "D'Ai CLI — agentic coding harness with cwd-scoped tools. No API key required."
 readme = "README.md"
 requires-python = ">=3.10"
 license = "MIT"
@@ -13,7 +13,7 @@ license-files = ["LICENSE"]
 authors = [
     { name = "Dhairya Shah" }
 ]
-keywords = ["ai", "cli", "chat", "llm", "terminal"]
+keywords = ["ai", "cli", "agent", "coding", "llm", "terminal"]
 classifiers = [
     "Development Status :: 4 - Beta",
     "Environment :: Console",
