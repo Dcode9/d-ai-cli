@@ -6,14 +6,14 @@ Supports streaming chat and non-streaming tool-calling completions.
 from __future__ import annotations
 
 import json
-from typing import Any, Generator
+from typing import Any, Generator, List, Dict, Optional
 
 import httpx
 
 API_URL = "https://d-ai-omega.vercel.app/api/chat"
 DEFAULT_MAX_TOKENS = 16384
 
-_client: httpx.Client | None = None
+_client = None  # type: Optional[httpx.Client]
 
 
 def get_client() -> httpx.Client:
@@ -23,34 +23,34 @@ def get_client() -> httpx.Client:
     return _client
 
 
-def _headers() -> dict[str, str]:
+def _headers() -> Dict[str, str]:
     return {
         "Content-Type": "application/json",
-        "User-Agent": "D-Ai-CLI/0.2.0",
+        "User-Agent": "D-Ai-CLI/0.2.2",
         "Accept": "application/json, text/event-stream",
     }
 
 
 def chat_completion(
-    messages: list[dict[str, Any]],
-    *,
-    tools: list[dict[str, Any]] | None = None,
-    max_tokens: int = DEFAULT_MAX_TOKENS,
-    temperature: float = 0.3,
-    provider: str | None = "inception",
-) -> dict[str, Any]:
+    messages,
+    tools=None,
+    max_tokens=DEFAULT_MAX_TOKENS,
+    temperature=0.3,
+    provider="inception",
+):
+    # type: (List[Dict[str, Any]], Optional[List[Dict[str, Any]]], int, float, Optional[str]) -> Dict[str, Any]
     """
     Non-streaming completion. Returns:
       { "content": str|None, "tool_calls": list|None, "raw": dict }
     """
     client = get_client()
-    payload: dict[str, Any] = {
+    payload = {
         "messages": messages,
         "stream": False,
         "max_tokens": max_tokens,
         "max_completion_tokens": max_tokens,
         "temperature": temperature,
-    }
+    }  # type: Dict[str, Any]
     if tools:
         payload["tools"] = tools
         payload["tool_choice"] = "auto"
@@ -63,7 +63,7 @@ def chat_completion(
     try:
         resp = client.post(API_URL, headers=_headers(), json=payload)
     except httpx.RequestError as e:
-        raise RuntimeError(f"Could not reach D-Ai backend: {e}") from e
+        raise RuntimeError("Could not reach D-Ai backend: {0}".format(e))
 
     if resp.status_code != 200:
         if provider:
@@ -71,7 +71,9 @@ def chat_completion(
             resp = client.post(API_URL, headers=_headers(), json=payload)
         if resp.status_code != 200:
             raise RuntimeError(
-                f"D-Ai backend returned HTTP {resp.status_code}: {resp.text[:400]}"
+                "D-Ai backend returned HTTP {0}: {1}".format(
+                    resp.status_code, resp.text[:400]
+                )
             )
 
     data = resp.json()
@@ -84,37 +86,46 @@ def chat_completion(
             "raw": data,
         }
     if "content" in data:
-        return {"content": data.get("content"), "tool_calls": data.get("tool_calls"), "raw": data}
+        return {
+            "content": data.get("content"),
+            "tool_calls": data.get("tool_calls"),
+            "raw": data,
+        }
     if isinstance(data, str):
         return {"content": data, "tool_calls": None, "raw": data}
     return {"content": json.dumps(data)[:2000], "tool_calls": None, "raw": data}
 
 
 def chat_stream(
-    messages: list[dict[str, Any]],
-    *,
-    temperature: float = 0.7,
-    max_tokens: int = DEFAULT_MAX_TOKENS,
-    provider: str | None = "inception",
-) -> Generator[str, None, None]:
+    messages,
+    temperature=0.7,
+    max_tokens=DEFAULT_MAX_TOKENS,
+    provider="inception",
+):
+    # type: (List[Dict[str, Any]], float, int, Optional[str]) -> Generator[str, None, None]
     """Stream text tokens (no tools)."""
     client = get_client()
-    payload: dict[str, Any] = {
+    payload = {
         "messages": messages,
         "stream": True,
         "max_tokens": max_tokens,
         "max_completion_tokens": max_tokens,
         "temperature": temperature,
         "enable_tools": False,
-    }
+    }  # type: Dict[str, Any]
     if provider:
         payload["provider"] = provider
 
-    def _do_stream(p: dict[str, Any]) -> Generator[str, None, None]:
+    def _do_stream(p):
+        # type: (Dict[str, Any]) -> Generator[str, None, None]
         with client.stream("POST", API_URL, headers=_headers(), json=p) as resp:
             if resp.status_code != 200:
                 body = resp.read().decode("utf-8", errors="replace")[:300]
-                raise RuntimeError(f"D-Ai backend returned HTTP {resp.status_code}: {body}")
+                raise RuntimeError(
+                    "D-Ai backend returned HTTP {0}: {1}".format(
+                        resp.status_code, body
+                    )
+                )
             for line in resp.iter_lines():
                 if not line:
                     continue
@@ -136,10 +147,12 @@ def chat_stream(
                             yield data
 
     try:
-        yield from _do_stream(payload)
+        for chunk in _do_stream(payload):
+            yield chunk
     except Exception:
         if provider:
             payload.pop("provider", None)
-            yield from _do_stream(payload)
+            for chunk in _do_stream(payload):
+                yield chunk
         else:
             raise
