@@ -7,13 +7,9 @@ from __future__ import annotations
 import json
 from typing import Any, Callable
 
-from rich.console import Console
-from rich.markup import escape
-
 from .providers import chat_completion, chat_stream
 from .tools import TOOL_SCHEMAS, execute_tool
-
-console = Console()
+from . import ui
 
 MAX_TOOL_ROUNDS = 20
 
@@ -61,13 +57,17 @@ def run_agent(
         *history,
     ]
 
+    tool_index = 0
+    shown_tools_header = False
+
     for _round in range(MAX_TOOL_ROUNDS):
-        result = chat_completion(
-            messages,
-            tools=TOOL_SCHEMAS,
-            max_tokens=max_tokens,
-            temperature=0.3,
-        )
+        with ui.console.status("  [dim]Thinking…[/]", spinner="dots"):
+            result = chat_completion(
+                messages,
+                tools=TOOL_SCHEMAS,
+                max_tokens=max_tokens,
+                temperature=0.3,
+            )
 
         tool_calls = result.get("tool_calls") or []
         content = (result.get("content") or "").strip()
@@ -76,6 +76,12 @@ def run_agent(
             if content:
                 history.append({"role": "assistant", "content": content})
             return content
+
+        if not shown_tools_header:
+            ui.console.print()
+            ui.console.print("  [bold]Tools[/]")
+            ui.print_divider()
+            shown_tools_header = True
 
         assistant_msg: dict[str, Any] = {
             "role": "assistant",
@@ -91,8 +97,14 @@ def run_agent(
             args = _parse_args(fn.get("arguments"))
             tool_id = tc.get("id") or f"call_{name}"
 
-            console.print(f"[dim]⚙ {escape(name)}[/] [dim]{escape(json.dumps(args)[:120])}[/]")
-            output = execute_tool(name, args)
+            tool_index += 1
+            ui.print_tool_start(name, args, tool_index)
+
+            with ui.console.status(f"  [dim]Running {name}…[/]", spinner="line"):
+                output = execute_tool(name, args)
+
+            ui.print_tool_end(name, output)
+
             if on_tool:
                 on_tool(name, args, output)
 

@@ -6,20 +6,20 @@ No API keys required — talks to the public D-Ai backend + local cwd-scoped too
 from __future__ import annotations
 
 import argparse
-import sys
 from pathlib import Path
 
 from rich.console import Console
 from rich.markdown import Markdown
 
 from . import __version__
+from . import ui
 from .agent import run_agent
 from .providers import DEFAULT_MAX_TOKENS
 
 console = Console()
 
 BANNER = f"""[bold gold1]D'Ai CLI[/]  [dim]v{__version__}[/]  [dim]· agent harness[/]
-Type "help", "exit", or ask anything. Tools work in the current directory.
+Type [bold]help[/], [bold]exit[/], or ask anything. Tools stay inside this folder.
 """
 
 HELP_TEXT = """
@@ -31,20 +31,26 @@ HELP_TEXT = """
   clear            Clear the screen
   reset            Clear conversation history
 
-[bold]Harness tools[/] (model can call these automatically)
-  list_dir, read_file, write_file, edit_file, mkdir, run_shell, web_search
+[bold]Harness tools[/] (used automatically when needed)
+  list_dir · read_file · write_file · edit_file · mkdir · run_shell · web_search
 
-  All file/shell tools are restricted to the current working directory.
+  Scoped to the current working directory only.
 
-[bold]Usage[/]
-  Ask coding questions, request features, or say things like:
-    "create a flask app in this folder"
-    "fix the failing tests"
-    "read main.py and explain it"
-
-[bold]No API key needed[/]
-  Uses the public D-Ai backend. Local tools run on your machine.
+[bold]Examples[/]
+  create a snake game in Code/ as HTML
+  fix the failing tests
+  read main.py and explain it
 """
+
+
+def _print_answer(answer: str) -> None:
+    ui.print_answer_header()
+    console.print()
+    if "\n" in answer or any(x in answer for x in ("```", "**", "# ", "- ")):
+        console.print(Markdown(answer))
+    else:
+        console.print(f"  {answer}")
+    console.print()
 
 
 def main() -> None:
@@ -76,12 +82,9 @@ def main() -> None:
     def one_shot(text: str) -> None:
         history: list[dict] = [{"role": "user", "content": text}]
         try:
-            with console.status("[dim]Working…[/]", spinner="dots"):
-                answer = run_agent(history, max_tokens=max_tokens)
+            answer = run_agent(history, max_tokens=max_tokens)
             if answer:
-                console.print()
-                console.print(Markdown(answer) if "\n" in answer else answer)
-                console.print()
+                _print_answer(answer)
         except Exception as e:
             console.print(f"[red]Error:[/] {e}")
 
@@ -146,19 +149,13 @@ def main() -> None:
         history.append({"role": "user", "content": user_input})
 
         try:
-            with console.status("[dim]Working…[/]", spinner="dots"):
-                answer = run_agent(history, max_tokens=max_tokens)
+            answer = run_agent(history, max_tokens=max_tokens)
 
             if not answer:
                 console.print("[yellow]Empty response.[/]")
                 continue
 
-            console.print()
-            if "\n" in answer or any(x in answer for x in ("```", "**", "# ")):
-                console.print(Markdown(answer))
-            else:
-                console.print(answer)
-            console.print()
+            _print_answer(answer)
 
         except RuntimeError as e:
             console.print(f"[red]Error:[/] {e}")

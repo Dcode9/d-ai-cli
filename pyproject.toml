@@ -4,7 +4,7 @@ build-backend = "hatchling.build"
 
 [project]
 name = "d-ai-cli"
-version = "0.2.0"
+version = "0.2.1"
 description = "D'Ai CLI — agentic coding harness with cwd-scoped tools. No API key required."
 readme = "README.md"
 requires-python = ">=3.10"
